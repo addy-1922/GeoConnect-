@@ -102,10 +102,10 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "geoconnect"),
+        "NAME": os.environ.get("geoconnect-db", "geoconnect"),
         "USER": os.environ.get("geoconnect_db_9u0a_user", "geo_connect"),
         "PASSWORD": os.environ.get("QaVgqvABHclI3fJgAq8y3BCGbeSScX1n", ""),
-        "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+        "HOST": os.environ.get("DB_HOST", "dpg-dapld3ad0e5s739h8gjg-a"),
         "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
