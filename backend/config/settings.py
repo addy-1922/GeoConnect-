@@ -2,56 +2,72 @@
 Django settings for the GeoConnect project (config package).
 
 Phase 1 — project setup:
-- PostgreSQL database (via environment variables)
+- PostgreSQL database via DATABASE_URL or individual environment variables
 - Django REST Framework + CORS
-- Django Channels + Redis channel layer (wired; WebSockets arrive in later phases)
+- Django Channels + Redis channel layer
 - Environment variables loaded from backend/.env
 """
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from backend/.env (development only).
+# Load environment variables from backend/.env
 load_dotenv(BASE_DIR / ".env")
+
 
 # ---------------------------------------------------------------------------
 # Security
 # ---------------------------------------------------------------------------
-SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-key-change-me")
 
-# SECURITY WARNING: don't run with DEBUG turned on in production!
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "insecure-dev-key-change-me"
+)
+
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
 allowed_hosts = os.environ.get("ALLOWED_HOSTS", "")
+
 if not allowed_hosts.strip():
     allowed_hosts = "localhost,127.0.0.1" if DEBUG else "*"
-ALLOWED_HOSTS = [host.strip() for host in allowed_hosts.split(",") if host.strip()]
 
-# Behind Render's TLS-terminating proxy, trust X-Forwarded-Proto so Django
-# treats requests as HTTPS (affects secure cookies / absolute URLs).
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in allowed_hosts.split(",")
+    if host.strip()
+]
+
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_PROXY_SSL_HEADER = (
+        "HTTP_X_FORWARDED_PROTO",
+        "https",
+    )
+
 
 # ---------------------------------------------------------------------------
 # Application definition
 # ---------------------------------------------------------------------------
-# "daphne" must be the first app so the dev server serves ASGI (WebSocket-ready).
+
 INSTALLED_APPS = [
     "daphne",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
     # Third-party
     "rest_framework",
     "corsheaders",
     "channels",
+
     # Project apps
     "accounts",
     "locations",
@@ -60,6 +76,7 @@ INSTALLED_APPS = [
     "notifications",
     "events",
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -73,7 +90,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+
 ROOT_URLCONF = "config.urls"
+
 
 TEMPLATES = [
     {
@@ -90,15 +109,23 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = "config.wsgi.application"
+
 ASGI_APPLICATION = "config.asgi.application"
+
 
 # ---------------------------------------------------------------------------
 # Database — PostgreSQL
 #
-# Production (Render/Railway) provides a single DATABASE_URL string; development uses
-# the individual DB_* variables from backend/.env.
+# Production:
+# Render/Railway provides DATABASE_URL.
+#
+# Development:
+# backend/.env can provide DB_NAME, DB_USER, DB_PASSWORD,
+# DB_HOST and DB_PORT.
 # ---------------------------------------------------------------------------
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -110,28 +137,38 @@ DATABASES = {
     }
 }
 
-database_url = os.environ.get("DATABASE_URL")
-if database_url:
-    from urllib.parse import urlsplit
 
+# If DATABASE_URL exists, use it.
+# This is the configuration used by Render/Railway.
+database_url = os.environ.get("DATABASE_URL")
+
+if database_url:
     parsed = urlsplit(database_url)
+
     DATABASES["default"] = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": parsed.path.lstrip("/"),
         "USER": parsed.username or "",
         "PASSWORD": parsed.password or "",
-        "HOST": parsed.hostname or "127.0.0.1",
-        "PORT": parsed.port or "5432",
+        "HOST": parsed.hostname or "",
+        "PORT": parsed.port or 5432,
     }
+
 
 # ---------------------------------------------------------------------------
 # Redis
 # ---------------------------------------------------------------------------
-REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
+
+REDIS_URL = os.environ.get(
+    "REDIS_URL",
+    "redis://127.0.0.1:6379/0"
+)
+
 
 # ---------------------------------------------------------------------------
 # Django Channels — Redis channel layer
 # ---------------------------------------------------------------------------
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
@@ -141,19 +178,35 @@ CHANNEL_LAYERS = {
     },
 }
 
+
 # ---------------------------------------------------------------------------
 # Password validation
 # ---------------------------------------------------------------------------
+
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.MinimumLengthValidator"
+    },
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.CommonPasswordValidator"
+    },
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.NumericPasswordValidator"
+    },
 ]
+
 
 # ---------------------------------------------------------------------------
 # Internationalization
 # ---------------------------------------------------------------------------
+
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "UTC"
@@ -162,49 +215,71 @@ USE_I18N = True
 
 USE_TZ = True
 
+
 # ---------------------------------------------------------------------------
 # Static files
 # ---------------------------------------------------------------------------
+
 STATIC_URL = "static/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Built React app (frontend/dist copied here by the Docker build).
-# WhiteNoise serves these files at their natural URL paths (/assets/...),
-# so the SPA's own hashed bundles resolve without a /static/ prefix.
+
+# Built React app
 FRONTEND_BUILD_DIR = BASE_DIR / "frontend_dist"
 
-# Media (user uploads such as profile pictures — used from Phase 2 on)
+
+# ---------------------------------------------------------------------------
+# Media files
+# ---------------------------------------------------------------------------
+
 MEDIA_URL = "/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
 
-WHITENOISE_ROOT = FRONTEND_BUILD_DIR if FRONTEND_BUILD_DIR.is_dir() else None
+
+# ---------------------------------------------------------------------------
+# WhiteNoise
+# ---------------------------------------------------------------------------
+
+WHITENOISE_ROOT = (
+    FRONTEND_BUILD_DIR
+    if FRONTEND_BUILD_DIR.is_dir()
+    else None
+)
+
+
+# ---------------------------------------------------------------------------
+# Default primary key
+# ---------------------------------------------------------------------------
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 # ---------------------------------------------------------------------------
 # Django REST Framework
 # ---------------------------------------------------------------------------
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        # Session-based auth only: the SPA signs in once and the session +
-        # CSRF token protect every request. Basic auth is intentionally absent
-        # so credentials are never sent on the wire.
         "rest_framework.authentication.SessionAuthentication",
     ],
+
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
 }
 
+
 # ---------------------------------------------------------------------------
-# CORS — allows the React dev server (Vite) to call the API
+# CORS
 # ---------------------------------------------------------------------------
+
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
@@ -216,9 +291,11 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+
 # ---------------------------------------------------------------------------
 # CSRF
 # ---------------------------------------------------------------------------
+
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
@@ -228,8 +305,6 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
-# The React dev server is on a different origin; accept requests that carry
-# a valid X-CSRFToken header (set up for the session-based auth in Phase 2).
 CSRF_COOKIE_SAMESITE = "Lax"
 
 CSRF_COOKIE_HTTPONLY = False
