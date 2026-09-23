@@ -31,6 +31,11 @@ if not allowed_hosts.strip():
     allowed_hosts = "localhost,127.0.0.1" if DEBUG else "*"
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts.split(",") if host.strip()]
 
+# Behind Render's TLS-terminating proxy, trust X-Forwarded-Proto so Django
+# treats requests as HTTPS (affects secure cookies / absolute URLs).
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # ---------------------------------------------------------------------------
 # Application definition
 # ---------------------------------------------------------------------------
@@ -91,7 +96,7 @@ ASGI_APPLICATION = "config.asgi.application"
 # ---------------------------------------------------------------------------
 # Database — PostgreSQL
 #
-# Production (Railway) provides a single DATABASE_URL string; development uses
+# Production (Render/Railway) provides a single DATABASE_URL string; development uses
 # the individual DB_* variables from backend/.env.
 # ---------------------------------------------------------------------------
 DATABASES = {
@@ -164,7 +169,7 @@ STATIC_URL = "static/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Built React app (frontend/dist copied here by the Railway prebuild hook).
+# Built React app (frontend/dist copied here by the Docker build).
 # WhiteNoise serves these files at their natural URL paths (/assets/...),
 # so the SPA's own hashed bundles resolve without a /static/ prefix.
 FRONTEND_BUILD_DIR = BASE_DIR / "frontend_dist"

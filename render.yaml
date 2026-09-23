@@ -1,0 +1,38 @@
+# Render Blueprint - deploys the whole stack in one go:
+#   web service (Docker) + managed Postgres + managed Redis-compatible Key Value.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: keyvalue
+    name: geoconnect-redis
+    plan: free
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
+
+  - type: web
+    name: geoconnect
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health/
+    startCommand: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT config.asgi:application"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "*"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: geoconnect-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: geoconnect-redis
+          type: keyvalue
+          property: connectionString
+
+databases:
+  - name: geoconnect-db
+    plan: free

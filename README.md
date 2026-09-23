@@ -220,6 +220,44 @@ development.
 
 ---
 
+## Deploy to Render (free)
+
+The repo includes a `render.yaml` Blueprint that provisions the **entire stack**
+in one step: a Docker web service + managed Postgres + managed Redis-compatible
+Key Value (all on the free tier, no credit card required).
+
+1. Push the repo to GitHub (the Blueprint is read from the repo root).
+2. In the Render dashboard: **New + → Blueprint** → connect the GitHub repo.
+3. Render auto-creates `geoconnect` (web), `geoconnect-db` (Postgres) and
+   `geoconnect-redis` (Key Value), wires `DATABASE_URL` and `REDIS_URL`
+   automatically, and deploys. A live `https://geoconnect.onrender.com` URL is
+   generated on success.
+4. Optional first-time users: register two accounts in the browser and test a
+   room, chat and live location.
+
+How it works:
+
+- `Dockerfile`: multi-stage — `node:20` builds the React app
+  (`frontend/dist`), `python:3.13-slim` installs `backend/requirements.txt`,
+  runs `migrate` + `collectstatic`, then launches **daphne** (ASGI, so WebSockets
+  work) on `$PORT`.
+- The SPA is served by Django via WhiteNoise (`WHITENOISE_ROOT` →
+  `backend/frontend_dist`) with an SPA fallback route; `/api`, `/ws`, `/media`
+  are never swallowed by the fallback.
+- Env vars set by the Blueprint: `DEBUG=False`, `ALLOWED_HOSTS=*`,
+  `SECRET_KEY` (auto-generated), `DATABASE_URL`, `REDIS_URL`.
+
+Free-tier caveats:
+
+- Web services **spin down after ~15 min idle** and take ~1 min to wake on the
+  next request.
+- Free Postgres **expires after 30 days** (upgrade or re-create to keep it).
+- The web service filesystem is ephemeral — uploaded **avatars reset on every
+  redeploy**. Attach a persistent disk (~1 GB) mounted at `backend/media` if you
+  want uploads to survive redeploys.
+
+---
+
 ## Verification
 
 ### Health check
