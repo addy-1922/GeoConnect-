@@ -103,8 +103,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.environ.get("DB_NAME", "geoconnect"),
-        "USER": os.environ.get("DB_USER", "geo_connect"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "USER": os.environ.get("geoconnect_db_9u0a_user", "geo_connect"),
+        "PASSWORD": os.environ.get("QaVgqvABHclI3fJgAq8y3BCGbeSScX1n", ""),
         "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
         "PORT": os.environ.get("DB_PORT", "5432"),
     }
