@@ -126,33 +126,25 @@ ASGI_APPLICATION = "config.asgi.application"
 # DB_HOST and DB_PORT.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Database — PostgreSQL
+# ---------------------------------------------------------------------------
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Add DATABASE_URL to the Render backend service Environment variables."
+    )
+
+import dj_database_url
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME"),
-        "USER": os.environ.get("DB_USER"),
-        "PASSWORD": os.environ.get("DB_PASSWORD"),
-        "HOST": os.environ.get("DB_HOST"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-    }
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=600,
+    )
 }
-
-
-# If DATABASE_URL exists, use it.
-# This is the configuration used by Render/Railway.
-database_url = os.environ.get("DATABASE_URL")
-
-if database_url:
-    parsed = urlsplit(database_url)
-
-    DATABASES["default"] = {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": parsed.path.lstrip("/"),
-        "USER": parsed.username or "",
-        "PASSWORD": parsed.password or "",
-        "HOST": parsed.hostname or "",
-        "PORT": parsed.port or 5432,
-    }
 
 
 # ---------------------------------------------------------------------------
