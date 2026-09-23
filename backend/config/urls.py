@@ -10,9 +10,8 @@ API namespaces (mounted under /api/):
 """
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 
 from accounts import views as accounts_views
 from config import api
@@ -25,7 +24,11 @@ urlpatterns = [
     path("api/users/", accounts_views.user_list_view, name="api-users-list"),
     path("api/rooms/", include("rooms.urls")),
     path("api/notifications/", include("notifications.urls")),
+    path("media/<path:path>", api.media_view, name="media"),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# SPA catch-all: everything that is not API, WebSocket, media, admin or static
+# falls through to the built React app so client-side routes work.
+urlpatterns.append(
+    re_path(r"^(?!api/|ws/|media/|admin/|static/).*", api.spa_index_view, name="spa-index")
+)

@@ -26,7 +26,10 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-dev-key-change-me")
 # SECURITY WARNING: don't run with DEBUG turned on in production!
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+allowed_hosts = os.environ.get("ALLOWED_HOSTS", "")
+if not allowed_hosts.strip():
+    allowed_hosts = "localhost,127.0.0.1" if DEBUG else "*"
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts.split(",") if host.strip()]
 
 # ---------------------------------------------------------------------------
 # Application definition
@@ -56,6 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -86,6 +90,9 @@ ASGI_APPLICATION = "config.asgi.application"
 
 # ---------------------------------------------------------------------------
 # Database — PostgreSQL
+#
+# Production (Railway) provides a single DATABASE_URL string; development uses
+# the individual DB_* variables from backend/.env.
 # ---------------------------------------------------------------------------
 DATABASES = {
     "default": {
@@ -97,6 +104,20 @@ DATABASES = {
         "PORT": os.environ.get("DB_PORT", "5432"),
     }
 }
+
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    from urllib.parse import urlsplit
+
+    parsed = urlsplit(database_url)
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": parsed.path.lstrip("/"),
+        "USER": parsed.username or "",
+        "PASSWORD": parsed.password or "",
+        "HOST": parsed.hostname or "127.0.0.1",
+        "PORT": parsed.port or "5432",
+    }
 
 # ---------------------------------------------------------------------------
 # Redis
@@ -143,10 +164,17 @@ STATIC_URL = "static/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Built React app (frontend/dist copied here by the Railway prebuild hook).
+# WhiteNoise serves these files at their natural URL paths (/assets/...),
+# so the SPA's own hashed bundles resolve without a /static/ prefix.
+FRONTEND_BUILD_DIR = BASE_DIR / "frontend_dist"
+
 # Media (user uploads such as profile pictures — used from Phase 2 on)
 MEDIA_URL = "/media/"
 
 MEDIA_ROOT = BASE_DIR / "media"
+
+WHITENOISE_ROOT = FRONTEND_BUILD_DIR if FRONTEND_BUILD_DIR.is_dir() else None
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

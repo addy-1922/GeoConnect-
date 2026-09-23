@@ -10,8 +10,32 @@ from datetime import datetime, timezone
 import redis
 from django.conf import settings
 from django.db import connection
-from django.http import JsonResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.static import serve as django_serve
+
+
+def spa_index_view(request):
+    """Serves the built React app's index.html for client-side routes.
+
+    WhiteNoise already handles /assets/* from the build; this catch-all is the
+    SPA fallback so URLs like /rooms/12 render the app instead of 404ing.
+    """
+    index_path = settings.FRONTEND_BUILD_DIR / "index.html"
+    if not index_path.exists():
+        raise Http404("Frontend not built.")
+    return HttpResponse(index_path.read_text(), content_type="text/html")
+
+
+def media_view(request, path):
+    """Serves uploaded media in production too (Django's static() helper only
+    works in DEBUG)."""
+    if settings.DEBUG:
+        return django_serve(request, path, document_root=settings.MEDIA_ROOT)
+    media_file = settings.MEDIA_ROOT / path
+    if not media_file.exists():
+        raise Http404("Not found.")
+    return FileResponse(open(media_file, "rb"))
 
 
 @csrf_exempt

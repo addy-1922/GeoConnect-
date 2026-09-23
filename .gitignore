@@ -17,6 +17,9 @@ core.sqlite3
 .env
 .env.local
 
+# --- Frontend build output copied into the backend for production ---
+backend/frontend_dist/
+
 # --- Node / React ---
 node_modules/
 frontend/dist/
